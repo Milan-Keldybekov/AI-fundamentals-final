@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>Resident Evil 4 · AI Rescue Simulator</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="intro-open">
+<!-- Local intro video includes its audio track. -->
+<section id="intro" class="intro-screen" aria-label="Resident Evil video introduction">
+ <video id="intro-video" autoplay loop playsinline preload="auto" src="assets/video/intro.mp4" aria-label="Looping Resident Evil introduction" tabindex="-1"></video>
+ <div class="intro-shade" aria-hidden="true"></div>
+ <p id="intro-prompt" class="intro-prompt">press any key to continue</p>
+ <button id="intro-start" class="intro-start" hidden>Start intro · sound on</button>
+ <svg class="intro-filter" aria-hidden="true" width="0" height="0"><defs><filter id="intro-worn-type" x="-5%" y="-15%" width="110%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.06 0.3" numOctaves="1" seed="4" result="grain"/><feDisplacementMap in="SourceGraphic" in2="grain" scale="1.3" xChannelSelector="R" yChannelSelector="G"/></filter></defs></svg>
+</section>
+<div id="music-dock" class="music-dock" hidden aria-label="Soundtrack controls">
+ <button id="music-toggle" class="music-record" type="button" aria-label="Choose background music" aria-expanded="false" aria-controls="music-menu" title="Choose background music"><span class="record-art" aria-hidden="true"></span></button>
+ <button id="music-sound" class="music-sound" type="button" aria-label="Turn sound off" aria-pressed="true" title="Turn sound off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-cross" d="m16 9 6 6m0-6-6 6"/></svg><span id="music-sound-label">SOUND ON</span></button>
+ <section id="music-menu" class="music-menu" aria-labelledby="music-heading" hidden><h2 id="music-heading">The soundtrack</h2><p class="music-caption">Choose a track · each song loops</p><div id="music-list" class="music-list" role="group" aria-label="Available songs"></div><p id="music-now" class="music-now" role="status" aria-live="polite">Ready · Serenity</p></section>
+ <audio id="music-audio" loop preload="none"></audio>
+</div>
+<div class="shell" id="simulator" inert aria-hidden="true">
+ <header class="header"><div><div class="eyebrow">Field operations / AI fundamentals</div><h1 class="brand-title"><img class="brand-logo" src="assets/images/logo.png" alt="Resident Evil 4" width="730" height="184"><span class="brand-suffix"><span style="color:#91a27f;font-weight:300">/</span> AI Rescue</span></h1><p class="sub">One objective. Every route has a cost. Guide Leon to Ashley with A* search and a one-step combat MDP.</p></div><div class="identity"><strong>RESCUE SIMULATOR</strong><span>PHASE 01 · OFFLINE EDITION<br>10 × 10 tactical environment</span></div></header>
+ <main class="workspace">
+  <div class="left-column">
+  <section class="panel" aria-labelledby="map-title">
+   <div class="panel-head"><h2 id="map-title"><span class="section-number">01</span>Operations map</h2><span id="phase" class="badge">READY TO PLAN</span></div>
+   <div class="panel-body">
+    <div class="scenario-row"><select id="scenario" aria-label="Example scenario"><option value="A" selected>A / Easy rescue</option><option value="B">B / Dangerous shortcut</option><option value="C">C / Blocked corridor</option></select><button id="load">Load Example Map</button></div>
+    <p class="scenario-note" id="scenario-note"></p><div class="scenario-actions" id="scenario-actions"></div>
+    <div class="toolbar" role="group" aria-label="Map editing tools">
+     <button class="tool active" data-tool="L" aria-pressed="true"><span class="l" data-character="L"></span>Place Leon</button><button class="tool" data-tool="A" aria-pressed="false"><span class="a" data-character="A"></span>Place Ashley</button><button class="tool" data-tool="G" aria-pressed="false"><span class="g" data-character="G"></span>Ganado</button><button class="tool" data-tool="C" aria-pressed="false"><span class="c" data-character="C"></span>Chainsaw</button><button class="tool" data-tool="#" aria-pressed="false"><span class="w">▧</span>Wall</button><button class="tool" data-tool="." aria-pressed="false"><span>⌫</span>Eraser</button>
+    </div>
+    <div class="grid-shell"><div class="col-nums" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span></div><div id="grid" class="grid" role="group" aria-label="Editable 10 by 10 map"></div></div>
+    <div class="legend"><span><b class="l" data-character="L"></b> Leon</span><span><b class="a" data-character="A"></b> Ashley</span><span><b class="g" data-character="G"></b> Ganado</span><span><b class="c" data-character="C"></b> Chainsaw</span><span><b>▧</b> Wall</span><span><i></i>Route</span><span><i class="explore"></i>Explored</span></div>
+    <p class="edit-help" id="edit-help">Select a tool, then click a cell. Arrow keys navigate the grid; Enter places an object.</p>
+   </div>
+   <div class="controls">
+    <div class="button-row"><button id="find">Find Path</button><button id="start" class="primary">▶ Start Simulation</button><button id="pause">Pause</button><button id="step">Next Step</button></div>
+    <div class="secondary-row"><label class="speed">Step interval <input id="speed" type="range" min="150" max="1500" step="50" value="650"><output id="speed-label">650 ms</output></label><label class="demo">Demo: next fight <select id="demo"><option value="random">Random (default)</option><option value="win">Force victory once</option><option value="loss">Force defeat once</option></select></label></div>
+    <div class="map-actions"><button id="reset">Reset Simulation</button><button id="clear" class="danger">Clear Grid</button></div>
+    <div id="status" class="status" role="status" aria-live="polite">Ready.</div>
+   </div>
+  </section>
+
+   <section id="hill-panel" class="panel hill-panel" aria-labelledby="hill-title" hidden>
+    <div class="panel-head"><h2 id="hill-title"><span class="section-number">05</span>Hill Climbing · door search</h2><span class="badge">RESCUE COMPLETE</span></div>
+    <div class="panel-body">
+     <p class="hill-intro">Ashley is safe. Search five enchanted doors using only immediate left and right neighbors. Danger levels are randomly generated from 1 to 99; lower is safer. The search can get stuck at a local minimum.</p>
+     <div id="hill-doors" class="hill-doors" role="group" aria-label="Five doors and their danger levels"></div>
+     <div class="hill-actions"><button id="hill-run" class="primary" type="button">Run</button><button id="hill-restart" type="button">Random Restart</button></div>
+     <p id="hill-result" class="hill-result" role="status" aria-live="polite"></p>
+     <div id="hill-history" class="hill-history" aria-label="Hill Climbing comparison history"></div>
+     <p class="hill-explanation"><b>How this Hill Climbing search works:</b> each door is a state and <code>safety score = −danger</code>. Only the immediately adjacent doors are neighbors (one at either end, two in the middle). At each step, Run compares those neighbors and moves to the lowest-danger neighbor only if it is strictly safer. It repeats from that door, stopping when no adjacent door improves safety. Equal danger is not an improvement. This local minimum may not be the safest door overall.</p>
+     <p class="hill-explanation">Click a door to choose a starting state. Random Restart keeps the same dangers, chooses a different random start, and runs again. Reset Simulation or load a map to close this panel; the next rescue generates new danger levels.</p>
+    </div>
+   </section>
+  </div>
+  <aside class="right">
+   <section class="panel"><div class="panel-head"><h2><span class="section-number">02</span>Enemy settings</h2><span class="badge">LIVE PARAMETERS</span></div><div class="panel-body">
+    <p class="settings-intro">Change the odds, change the route. Settings apply to every active enemy of that type and immediately replan A*.</p>
+    <div id="enemy-settings" class="enemy-settings"></div>
+    <details class="definitions"><summary>What do these parameters mean?</summary><ul><li><b>Win probability:</b> chance Leon defeats the enemy.</li><li><b>Victory reward:</b> positive points earned on a win.</li><li><b>Loss penalty:</b> positive magnitude subtracted on a loss.</li><li><b>Combat effort:</b> points spent whenever a fight is attempted.</li></ul><p>Realized net reward = victory rewards − loss penalties − effort. Walking and A* route costs are planning units, tracked separately from combat points. Inputs accept probabilities 0–100% and nonnegative values up to 1,000.</p></details>
+   </div></section>
+   <section class="panel"><div class="panel-head"><h2><span class="section-number">03</span>AI analysis</h2><span class="badge">MDP → A*</span></div><div class="analysis-content">
+    <div class="metrics"><div class="metric"><strong id="nodes">0</strong><span>Explored nodes</span></div><div class="metric"><strong id="steps">—</strong><span>Route length / tiles</span></div><div class="metric"><strong id="cost">—</strong><span>Estimated route cost</span></div></div>
+    <div class="cost-split"><span>Walking: <b id="walking">—</b></span><span>Encounter surcharge: <b id="encounter">—</b></span></div>
+    <div class="route"><p id="route-reason"></p><div class="route-line" id="route-line"></div></div>
+    <label class="check"><input id="show-explored" type="checkbox" checked> Show explored cells <span class="muted">· Manhattan heuristic · 4 directions</span></label>
+    <div id="mdp-cards" class="mdp-cards"></div>
+    <p class="math-note"><b>Local choice ≠ global route.</b> The MDP compares immediate Fight vs. Avoid (0). A* compares complete routes. Even a locally unattractive fight can beat a long detour. Entering an enemy tile always requires combat.</p>
+    <details class="transition" open><summary>MDP states, transitions &amp; rewards</summary><p>States: <b>Enemy Active</b>, <b>Enemy Defeated</b>, <b>Leon Defeated</b>. Actions at Enemy Active: <b>Fight</b> or <b>Avoid</b>. Fight outcomes end this local encounter; Leon Defeated also ends the mission.</p><div id="transitions"></div><p>Avoid keeps the enemy active with probability 1, reward 0, and requires a different route. This is a one-step horizon: no future state value is added. The defeated states have no further actions in this encounter.</p></details>
+    <details style="margin-top:10px"><summary>Why the A* heuristic is admissible</summary><p><code>EnemyTileCost = 1 + max(0, −Q(Fight))</code> is an explicit game-design conversion from reward to cost, not an MDP equation. All moves cost at least 1, so Manhattan distance never overestimates remaining cost. A* tracks its open set, g scores, f = g + h scores, and parents to reconstruct the cheapest route. Positive rewards never create negative costs or repeatable walking bonuses.</p><p>Explored means nodes removed from the open set, including the goal. Route length and costs refer to the remaining plan. An empty route at Ashley has cost 0. Blue cells include the current start and destination.</p></details>
+   </div></section>
+  </aside>
+ </main>
+ <section class="stats" aria-label="Mission statistics"><div class="stat"><span>Movement</span><strong id="stat-moves">0</strong><small>tiles traveled</small></div><div class="stat"><span>Encounters</span><strong id="stat-fights">0</strong><small id="stat-wins">0 victories</small></div><div class="stat"><span>Combat points</span><strong id="stat-gross">0</strong><small id="stat-effort">0 effort spent</small></div><div class="stat"><span>Realized net reward</span><strong id="stat-net">0</strong><small>combat points − effort</small></div></section>
+ <section class="panel log-panel"><div class="panel-head"><h2><span class="section-number">04</span>Event log</h2><button id="clear-log">Clear log</button></div><div id="log" class="log" role="log" aria-live="off" aria-label="Simulation events"></div></section>
+ <footer class="footer"><span>UNIVERSITY AI LAB · A* PATHFINDING + ONE-STEP MARKOV DECISION PROCESS</span><span>Fan-made educational simulation · Unaffiliated with Capcom</span></footer>
+</div>
+<script src="js/app.js"></script>
+</body>
+</html>
