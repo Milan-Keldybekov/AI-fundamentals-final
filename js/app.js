@@ -1,8 +1,8 @@
 'use strict';
 // Intro timing starts on actual playback, rather than file-open or buffering time.
-// Fall back to silent video when a browser requires a gesture for sound.
+// The start button begins the video and its embedded music in one user gesture.
 // A subsequent gesture fades picture and audio together before unloading them.
-let introState='starting';
+let introState='awaiting';
 const INTRO_FADE_MS=3000;
 let introFadeFrame=null,introFadeTimer=null;
 let introPlayRequest=0;
@@ -12,6 +12,7 @@ const introStartButton=document.getElementById('intro-start');
 const introPrompt=document.getElementById('intro-prompt');
 function showIntroError(){
  if(introState==='closed'||introState==='fading')return;
+ introScreen.classList.remove('is-playing');introStartButton.disabled=false;
  introState='error';introStartButton.textContent='Video unavailable · continue to simulator';introStartButton.hidden=false;
 }
 function dismissIntro(){
@@ -48,37 +49,37 @@ function completeIntroDismissal(){
  document.getElementById('find').focus();
  startSimulatorMusic();
 }
-async function playIntro({muted=false}={}){
- if(introState==='closed'||introState==='fading')return;
+async function playIntro(){
+ if(introState!=='awaiting')return;
  const request=++introPlayRequest;
- introState='starting';introStartButton.hidden=true;
- introVideo.muted=muted;introVideo.volume=1;
+ introState='starting';introStartButton.disabled=true;introStartButton.textContent='Loading intro…';
+ introVideo.muted=false;introVideo.volume=1;
  try{await introVideo.play();if(request===introPlayRequest)markIntroPlaying();}
  catch(error){
   if(request!==introPlayRequest)return;
   if(introState==='closed'||introState==='fading')return;
   if(introState==='error')return;
   if(error.name==='NotSupportedError'||introVideo.error){showIntroError();return;}
-  if(error.name==='NotAllowedError'&&!muted){playIntro({muted:true});return;}
+  introVideo.pause();introScreen.classList.remove('is-playing');introStartButton.disabled=false;
   introState='awaiting';introStartButton.hidden=false;
   introStartButton.textContent='Start intro · sound on';
  }
 }
 function handleIntroInput(event){
  if(introState==='closed')return;
+ // Let the native button receive clicks, Enter, and Space before playback.
+ if(introState==='awaiting'||introState==='error')return;
  if(event.type==='keydown'&&['Tab','Shift','Control','Alt','Meta'].includes(event.key))return;
  event.preventDefault();event.stopPropagation();
- if(introState==='fading')return;
+ if(introState==='fading'||introState==='starting')return;
  // A held key cannot start and immediately skip the same intro.
  if(event.repeat)return;
- if(introState==='starting'||introState==='awaiting'||(introState==='playing'&&introVideo.muted)){playIntro();return;}
  dismissIntro();
 }
 function markIntroPlaying(){
  if(introState==='closed'||introState==='fading')return;
- introState='playing';introStartButton.hidden=!introVideo.muted;introScreen.classList.add('is-playing');
- introStartButton.textContent='Enable intro sound';
- introPrompt.textContent=introVideo.muted?'press any key for sound':'press any key to continue';
+ introState='playing';introStartButton.hidden=true;introScreen.classList.add('is-playing');
+ introPrompt.textContent='press any key to continue';
 }
 introVideo.addEventListener('playing',markIntroPlaying);
 introVideo.addEventListener('error',showIntroError);
@@ -87,8 +88,9 @@ introVideo.querySelector('source:last-child').addEventListener('error',showIntro
 document.addEventListener('keydown',handleIntroInput,true);
 introScreen.addEventListener('pointerdown',handleIntroInput);
 function handleIntroClick(event){
- // Pointer input is handled on pointerdown; click handles keyboard/AT activation.
- if(event.detail===0)handleIntroInput(event);
+ event.preventDefault();event.stopPropagation();
+ if(introState==='awaiting')playIntro();
+ else if(introState==='error')dismissIntro();
 }
 introStartButton.addEventListener('click',handleIntroClick);
 
@@ -550,4 +552,4 @@ buildSettings();
 document.querySelectorAll('[data-character]').forEach(holder=>holder.replaceChildren(characterImage(holder.dataset.character)));
 loadScenario('A');
 initMusic();
-playIntro();
+introStartButton.focus();

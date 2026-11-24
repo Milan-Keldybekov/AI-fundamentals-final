@@ -25,6 +25,6 @@ Opens directly in your browser. No download or installation required.
 
 ## Intro playback
 
-The intro offers WebM and MP4 sources for browser compatibility. If audible autoplay is blocked, the video starts silently; click or press a key to enable its music, then click or press again to fade into the simulator. Input while the video is loading starts playback instead of skipping it. If neither format can play, the continue button still opens the simulator.
+The intro offers WebM and MP4 sources for browser compatibility. The site opens on a black screen with a Start intro button. Activate the button to start the video and its embedded music together; click or press a key during playback to fade into the simulator. Input while the video is loading does not skip it. If neither format can play, the continue button still opens the simulator.
 
 Fan-made educational project; unaffiliated with Capcom.
