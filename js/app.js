@@ -1,13 +1,19 @@
 'use strict';
 // Intro timing starts on actual playback, rather than file-open or buffering time.
-// Browsers may reject audible autoplay; the first gesture then starts the intro.
+// Fall back to silent video when a browser requires a gesture for sound.
 // A subsequent gesture fades picture and audio together before unloading them.
 let introState='starting';
 const INTRO_FADE_MS=3000;
 let introFadeFrame=null,introFadeTimer=null;
+let introPlayRequest=0;
 const introScreen=document.getElementById('intro');
 const introVideo=document.getElementById('intro-video');
 const introStartButton=document.getElementById('intro-start');
+const introPrompt=document.getElementById('intro-prompt');
+function showIntroError(){
+ if(introState==='closed'||introState==='fading')return;
+ introState='error';introStartButton.textContent='Video unavailable · continue to simulator';introStartButton.hidden=false;
+}
 function dismissIntro(){
  if(introState==='closed'||introState==='fading')return;
  introState='fading';introStartButton.hidden=true;
@@ -32,7 +38,7 @@ function completeIntroDismissal(){
  if(introFadeTimer!==null)clearTimeout(introFadeTimer);
  introFadeFrame=null;introFadeTimer=null;
  introScreen.style.setProperty('--intro-darkness','1');introVideo.volume=0;
- introState='closed';introVideo.pause();introVideo.removeAttribute('src');introVideo.load();
+ introState='closed';introVideo.pause();introVideo.removeAttribute('src');introVideo.querySelectorAll('source').forEach(source=>source.remove());introVideo.load();
  introScreen.hidden=true;introScreen.setAttribute('aria-hidden','true');
  const simulator=document.getElementById('simulator');simulator.inert=false;simulator.removeAttribute('aria-hidden');
  document.body.classList.remove('intro-open');
@@ -42,35 +48,42 @@ function completeIntroDismissal(){
  document.getElementById('find').focus();
  startSimulatorMusic();
 }
-async function playIntro(){
+async function playIntro({muted=false}={}){
  if(introState==='closed'||introState==='fading')return;
+ const request=++introPlayRequest;
  introState='starting';introStartButton.hidden=true;
- introVideo.muted=false;introVideo.volume=1;
- try{await introVideo.play();}
+ introVideo.muted=muted;introVideo.volume=1;
+ try{await introVideo.play();if(request===introPlayRequest)markIntroPlaying();}
  catch(error){
+  if(request!==introPlayRequest)return;
   if(introState==='closed'||introState==='fading')return;
-  if(introState==='playing'||introState==='error')return;
+  if(introState==='error')return;
+  if(error.name==='NotSupportedError'||introVideo.error){showIntroError();return;}
+  if(error.name==='NotAllowedError'&&!muted){playIntro({muted:true});return;}
   introState='awaiting';introStartButton.hidden=false;
   introStartButton.textContent='Start intro · sound on';
  }
 }
 function handleIntroInput(event){
  if(introState==='closed')return;
+ if(event.type==='keydown'&&['Tab','Shift','Control','Alt','Meta'].includes(event.key))return;
  event.preventDefault();event.stopPropagation();
  if(introState==='fading')return;
  // A held key cannot start and immediately skip the same intro.
  if(event.repeat)return;
- if(introState==='awaiting'){playIntro();return;}
+ if(introState==='starting'||introState==='awaiting'||(introState==='playing'&&introVideo.muted)){playIntro();return;}
  dismissIntro();
 }
-introVideo.addEventListener('playing',()=>{
+function markIntroPlaying(){
  if(introState==='closed'||introState==='fading')return;
- introState='playing';introStartButton.hidden=true;introScreen.classList.add('is-playing');
-});
-introVideo.addEventListener('error',()=>{
- if(introState==='closed'||introState==='fading')return;
- introState='error';introStartButton.textContent='Video unavailable · continue to simulator';introStartButton.hidden=false;
-});
+ introState='playing';introStartButton.hidden=!introVideo.muted;introScreen.classList.add('is-playing');
+ introStartButton.textContent='Enable intro sound';
+ introPrompt.textContent=introVideo.muted?'press any key for sound':'press any key to continue';
+}
+introVideo.addEventListener('playing',markIntroPlaying);
+introVideo.addEventListener('error',showIntroError);
+// Exhausted source fallbacks report their error on the final source element.
+introVideo.querySelector('source:last-child').addEventListener('error',showIntroError);
 document.addEventListener('keydown',handleIntroInput,true);
 introScreen.addEventListener('pointerdown',handleIntroInput);
 function handleIntroClick(event){

@@ -10,7 +10,10 @@
 <body class="intro-open">
 <!-- Local intro video includes its audio track. -->
 <section id="intro" class="intro-screen" aria-label="Resident Evil video introduction">
- <video id="intro-video" autoplay loop playsinline preload="auto" src="assets/video/intro.mp4" aria-label="Looping Resident Evil introduction" tabindex="-1"></video>
+ <video id="intro-video" autoplay loop playsinline preload="auto" aria-label="Looping Resident Evil introduction" tabindex="-1">
+  <source src="assets/video/intro.webm" type='video/webm; codecs="vp8, vorbis"'>
+  <source src="assets/video/intro.mp4" type='video/mp4; codecs="avc1.64001f, mp4a.40.2"'>
+ </video>
  <div class="intro-shade" aria-hidden="true"></div>
  <p id="intro-prompt" class="intro-prompt">press any key to continue</p>
  <button id="intro-start" class="intro-start" hidden>Start intro · sound on</button>
